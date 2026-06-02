@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -277,5 +278,85 @@ namespace Tanks.Complete
 
             return position;
         }
+
+        IEnumerator CoroutineUpdate()
+        {
+            if (!m_IsComputerControlled)
+            {
+                // if there is a cooldown timer, decrement it
+                if (m_ShotCooldownTimer > 0.0f)
+                {
+                    m_ShotCooldownTimer -= Time.deltaTime;
+                }
+            
+                // The slider should have a default value of the minimum launch force.
+                m_AimSlider.value = m_BaseMinLaunchForce;
+
+                // If the max force has been exceeded and the shell hasn't yet been launched...
+                if (m_CurrentLaunchForce >= m_MaxLaunchForce && !m_Fired)
+                {
+                    // ... use the max force and launch the shell.
+                    m_CurrentLaunchForce = m_MaxLaunchForce;
+                    Fire ();
+                }
+                // Otherwise, if the fire button has just started being pressed...
+                else if (m_ShotCooldownTimer <= 0 && fireAction.WasPressedThisFrame())
+                {
+                    // ... reset the fired flag and reset the launch force.
+                    m_Fired = false;
+                    m_CurrentLaunchForce = m_MinLaunchForce;
+
+                    // Change the clip to the charging clip and start it playing.
+                    m_ShootingAudio.clip = m_ChargingClip;
+                    m_ShootingAudio.Play ();
+                }
+                // Otherwise, if the fire button is being held and the shell hasn't been launched yet...
+                else if (fireAction.IsPressed() && !m_Fired)
+                {
+                    // Increment the launch force and update the slider.
+                    m_CurrentLaunchForce += m_ChargeSpeed * Time.deltaTime;
+
+                    m_AimSlider.value = m_CurrentLaunchForce;
+                }
+                // Otherwise, if the fire button is released and the shell hasn't been launched yet...
+                else if (fireAction.WasReleasedThisFrame() && !m_Fired)
+                {
+                    // ... launch the shell.
+                    Fire ();
+                }
+            }
+            else
+            {
+                // The slider should have a default value of the minimum launch force.
+                m_AimSlider.value = m_BaseMinLaunchForce;
+
+                // If the max force has been exceeded and the shell hasn't yet been launched...
+                if (m_CurrentLaunchForce >= m_MaxLaunchForce && !m_Fired)
+                {
+                    // ... use the max force and launch the shell.
+                    m_CurrentLaunchForce = m_MaxLaunchForce;
+                    Fire ();
+                }
+                // Otherwise, if the fire button is being held and the shell hasn't been launched yet...
+                else if (m_IsCharging && !m_Fired)
+                {
+                    // Increment the launch force and update the slider.
+                    m_CurrentLaunchForce += m_ChargeSpeed * Time.deltaTime;
+
+                    m_AimSlider.value = m_CurrentLaunchForce;
+                }
+                // Otherwise, if the fire button is released and the shell hasn't been launched yet...
+                else if (fireAction.WasReleasedThisFrame() && !m_Fired)
+                {
+                    // ... launch the shell.
+                    Fire ();
+                    m_IsCharging = false;
+                }
+            }
+            
+            
+            yield return null;
+        }
     }
+    
 }
